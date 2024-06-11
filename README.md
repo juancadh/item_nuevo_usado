@@ -3,12 +3,16 @@
 
 - [Objetivo](#objetivo)
 - [Pasos para instalación](#pasos-para-instalación)
+- [Resultados](#resultados)
+    - [Selección de variables](#selección-de-variables)
+    - [Medida de desempeño secundaria](#medida-de-desempeño-secundaria)
+    - [Desempeño alcanzado](#desempeño-alcanzado)
 - [Variables](#variables)
     - [Variables no usadas](#variables-no-usadas)
-- [Resultados](#resultados)
 - [Puesta en producción](#puesta-en-producción)
 - [Por mejorar](#por-mejorar)
 - [Tecnologías](#tecnologías)
+- [Librerias utilizadas](#librerias-utilizadas)
 - [Recursos](#recursos)
 - [Licencia](#licencia)
 - [Autor](#autor)
@@ -19,7 +23,38 @@ Usando la base de datos `MLA_100k_checked_v3.jsonlines` estimar un modelo de apr
 ## Pasos para instalación
 1. Clone el repositorio.
 2. Abre el proyecto con el editor de código de preferencia.
-3. Instale los requerimientos `requirements.txt`
+3. En la carpeta [Notebooks](https://github.com/juancadh/item_nuevo_usado/tree/main/notebooks) encontrará dos archivos:
+   * [EDA.ipynb](https://github.com/juancadh/item_nuevo_usado/blob/main/notebooks/EDA.ipynb): Jupyter Notbook con el Exploratory Data Analysis (EDA).
+   * [modelling.ipynb](https://github.com/juancadh/item_nuevo_usado/blob/main/notebooks/modelling.ipynb): Jupyter Notebook con para definir y evaluar el clasificador.
+
+## Resultados
+
+#### Selección de variables
+
+Las variables fueron seleccionadas de acuerdo a los siguientes criterios ordenados (ver sección [Variables](#variables) para más detalle):
+
+1. La variable no fue considerada si tenia mas del 70% de valores nulos o vacios. Se descartaron: *differential_pricing, catalog_product_id, subtitle, original_price, official_store_id, video_id, listing_source, coverage_areas, descriptions, international_delivery_mode, shipping_methods, shipping_dimensions*
+2. La variable no fue considerada si todos sus valores eran repetidos con otra variable o si eran una transformacion lineal de otra. Se descartó: *base_price*.
+3. La variable no fue considerada si su valor representa un id, codigo o URL que no tiene información, significado o no se puede mappear con otras tablas. Se descartó: *deal_ids, thumbnail, secure_thumbnail, permalink, site_id, parent_item_id*.
+4. Para las variable categoricas. Se tomaron las variables que lograban separar bien las clases de nuevo o usado. Dentro del DEA, se utilizó la **prueba Chi-cuadrado sobre las tablas de contigenci** a y se esperaba que rechazara la Ho de independencia para poder decir si la variable era o no un buen predictor. Adicionalmente, se observó usando un gráfico de violín si las clases estaban separadas. 
+5. Las dos variables de texto: *title* y *warranty* se incluyeron en el modelo usando un vectorizador TfiDF dado que se presumia que podian contener información relevante para la clasificacion.
+6. Al final, solo se contó con una variable continua: *price* (dado que varias de ellas se volvieron categoricas se muestra en el DEA), la cual fue incluida en el modelo y se observó en esa etapa si aportaba o no para mejorar la medida de desempeño.
+7. La lista de variables utilizada al final fue: *'title', 'price', 'sold_quantity_category', 'listing_type_id', 'days_active', 'buying_mode', 'available_quantity_category', 'shipping_local_pick_up', 'shipping_free_shipping', 'shipping_mode',
+'has_variations', 'warranty'*.
+
+#### Medida de desempeño secundaria
+Adiconalmente a la medida de *Accuracy* que se solicitaba en el ejercicio, se utilizó el `Área bajo la curva ROC` (ROC AUC), la cual es una métrica robusta que evalua el rendimiento del modelo sin depender del umbral de clasificación.
+
+#### Desempeño alcanzado
+La siguiente tabla resume los resultados de los diferentes modelos de clasificación que fueron probados usadon la medida de desempeño Accuracy y la medida propuesta de ROC AUC.
+> El mejor modelo fue el modelo XGBoost con un accruacy en test de `0.8854` y un ROC AUC en test de `0.9541`
+
+|                | **Baseline (Logit simple)** | **Logit Mejorado** | **XGBoost** | **SVC**  |
+|----------------|-----------------------------|--------------------|-------------|----------|
+| Train Accuracy | 0.8799                      | 0.9022             | 0.8942      | 0.8617   |
+| Test Accuracy  | 0.8611                      | `0.8879`           | 0.8854      | 0.8378   |
+| Train ROC AUC  | 0.9478                      | 0.9616             | 0.9635      | 0.9569   |
+| Test ROC AUC   | 0.9338                      | 0.9524             | `0.9541`    | 0.9294   |
 
 ## Variables
 * **sellers_address** Ubicación del seller. (country, state, city).
@@ -43,63 +78,67 @@ Usando la base de datos `MLA_100k_checked_v3.jsonlines` estimar un modelo de apr
 * **shipping_free_shipping**: Tiene o no envio gratuido. Si tiene envio gratuito puede ser un buen indicador de que el producto es nuevo. 
 * **shipping_mode**: El modo de entrega puede ayudar a identificar si es nuevo o usado. Toma los valores de 'custom', 'me1', 'me2', 'not_specified'.
   
-#### Variables no usadas
+#### Variables no usadas 
 * **base_price**: Tiene exactamente los mismos valores que price (revisado)
 * **deal_ids**: Contiene solo valores de deal ids sin relevencia. 
+* **thumbnail**: No tiene imagenes. Solo una imagen default.
+* **secure_thumbnail**: No tiene informacion relevante. Envia a una pagina forbidden.
+* **permalink**: No tiene links relevantes. Se revisaron y estan expirados.
+* **site_id**: Toma siempre el valor de MLA (Mercado Libre Argentina)
+* **sellers_country**: Siempre toma el valor de Argentina.
+* **parent_item_id**: Id del padre, no me dice nada por la poca cantidad de datos.
 * **differential_pricing**: Todos los valores son nulos.
 * **catalog_product_id**: Todos los valores son nulos.
 * **subtitle**: Todos los valores son nulos.
 * **original_price**: Todos los valores son nulos.
 * **official_store_id**: Todos los valores son nulos.
 * **video_id**: Todos los valores son nulos.
-* **site_id**: Toma siempre el valor de MLA (Mercado Libre Argentina)
 * **listing_source**: Todos los datos estan en blanco.
-* **parent_item_id**: Id del padre, no me dice nada.
 * **coverage_areas**: No contiene información. Solo arreglos vacios.
 * **descriptions**: Lista de id. Se puede omitir. 
 * **international_delivery_mode**: No tiene datos.
-* **thumbnail**: No tiene imagenes. Solo una imagen default.
-* **secure_thumbnail**: No tiene informacion relevante. Envia a una pagina forbidden.
-* **permalink**: No tiene links relevantes. Se revisaron y estan expirados.
 * **shipping_methods**: No tiene información. Todo vacio. 
 * **shipping_dimensions**: No tiene informacion relevante. 
 
-## Resultados
-
-La siguiente tabla resume los resultados de los diferentes modelos de clasificación que fueron probados usadon la medida de desempeño Accuracy y la medida propuesta de ROC AUC.
-> El mejor modelo fue el modelo Logit con un accruacy en test de `0.8878` y un ROC AUC en test de `0.9524`
-
-|                | **Baseline (Logit simple)** | **Logit Mejorado** | **XGBoost** | **SVM** | **NNet** |
-|----------------|-----------------------------|--------------------|-------------|---------|----------|
-| Train Accuracy | 0.8799                      | 0.9022             | 0.8898      |         |          |
-| Test Accuracy  | 0.8611                      | `0.8879`           | 0.8847      |         |          |
-| Train ROC AUC  | 0.9478                      | 0.9616             | 0.9600      |         |          |
-| Test ROC AUC   | 0.9338                      | 0.9524             | `0.9526`    |         |          |
 
 ## Puesta en producción
 
 Para poner en producción el modelo de clasificacion de items nuevos y usados, se recomienda implementar una API haciendo uso del modelo `Logit Mejorado` el cual tiene un muy buen desempeño frente a los otros competidores y además ofrece una baja latencia. 
 
-En el archivo `for_deployment.py` se ha dispuesto un esquema de API sencilla utilizando Flask. Este recibe como input la información en el mismo formato json con el que se entrenó el modelo (el mismo usado en la API de MELI) y entrega como resultado el siguiente formato JSON:
+En el archivo [for_deployment.py](https://github.com/juancadh/item_nuevo_usado/blob/main/for_deployment.py) se ha dispuesto un esquema de API sencilla utilizando el framework de Flask, sin embargo, se recomienda migrar a **Fast API** para mejorar la velocidad y la documentación. 
+
+La API recibe como input la información en el mismo formato json con el que se entrenó el modelo (el mismo usado en la API de MELI) y entrega como resultado el siguiente formato JSON:
 
 ```json
 {
-    "prediction": 'Nuevo', 
+    "prediction": "Nuevo", 
     "probability": 0.872321
 }
 ```
 
-Donde `prediccion` correponde a la prediccion final estimada por el clasificador y `probability` corresponde a la probabilidad estiada del modelo.
+Donde `prediction` correponde a la prediccion final estimada por el clasificador y `probability` corresponde a la probabilidad estiada del modelo.
 
 ## Por mejorar
 
 1. Dado el recurso limitado del tiempo y la capacidad de computo, se siguiere mejorar la optimizacion de los hiperparametros de los modelos lo cual puede mejorar el desempeño.
-2. Incluir una etapa de selección de features usando la importancia que tiene cada una de estas en la predicción final.
-3. Realziar un analisis post-estimación como SHAP values para entender mejor como interactua cada variable en la probabilidad de predecir nuevo o usado. 
+2. Incluir una etapa de selección de features usando alguna tecnica como KNN, Random Forest Feature Selection o Recursive Feature Elimination (RFE) entendiendo estadisticamente la importancia que tiene cada una de estas en la predicción final.
+3. Realizar un analisis post-estimación como SHAP values para entender mejor como interactua cada variable en la probabilidad de predecir nuevo o usado. 
 
 ## Tecnologías
-*   Python 3.11
+*   Python 3.11.3
 *   Git / Github
+*   Postman -- Para revisar que la API funcione.
+
+## Librerias utilizadas
+* pandas
+* numpy
+* sklearn
+* xgboost
+* matplotlib
+* tensorflow
+* keras
+* joblib
+* flask
 
 ## Recursos
 * [Chi-square test in contingency tables](https://towardsdatascience.com/chi-square-test-for-feature-selection-in-machine-learning-206b1f0b8223) - Used to DEA and feature selection

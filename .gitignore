@@ -1,1 +1,5 @@
-temp/
+env/
+.env
+
+myenv/
+.myenv

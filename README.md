@@ -3,13 +3,16 @@
 
 - [Objetivo](#objetivo)
 - [Pasos para instalación](#pasos-para-instalación)
+  - [Usando Docker](#usando-docker)
+  - [Usando ambiente virtual](#usando-ambiente-virtual)
 - [Resultados](#resultados)
     - [Selección de variables](#selección-de-variables)
     - [Medida de desempeño secundaria](#medida-de-desempeño-secundaria)
     - [Desempeño alcanzado](#desempeño-alcanzado)
+    - [Hitos](#hitos)
+- [Puesta en producción](#puesta-en-producción)
 - [Variables](#variables)
     - [Variables no usadas](#variables-no-usadas)
-- [Puesta en producción](#puesta-en-producción)
 - [Por mejorar](#por-mejorar)
 - [Tecnologías](#tecnologías)
 - [Librerias utilizadas](#librerias-utilizadas)
@@ -18,14 +21,48 @@
 - [Autor](#autor)
 
 ## Objetivo
-Usando la base de datos `MLA_100k_checked_v3.jsonlines` estimar un modelo de aprendizaje automático que permita predecir si un item del marketplace es nuevo o usado.
+Usando la base de datos `MLA_100k_checked_v3.jsonlines` estimar un modelo de aprendizaje automático que permita predecir si un ítem del marketplace es nuevo o usado.
 
 ## Pasos para instalación
-1. Clone el repositorio.
-2. Abre el proyecto con el editor de código de preferencia.
-3. En la carpeta [Notebooks](https://github.com/juancadh/item_nuevo_usado/tree/main/notebooks) encontrará dos archivos:
+
+### Usando Docker
+1. Utiliza el siguiente comando para construir las imágenes y levantar los contenedores:
+```bash
+docker-compose up --build
+```
+2. Acceder al contenedor.
+```bash
+docker-compose up
+```
+
+### Usando ambiente virtual
+1. Clonar este repositorio localmente.
+2. Crear un ambiente virtual.
+   * Instalar virtualenv
+   ```bash
+   pip install virtualenv
+   ```
+   * Crear el ambiente virtual
+    ```bash
+    virtualenv env
+    ```
+    * Activar el ambiente virtual (windows)
+    ```bash
+    env\Scripts\activate
+    ```
+    * Activar el ambiente virtual (En macOS y Linux)
+    ```bash
+    source env/bin/activate
+    ```
+3. Installar los requerimientos de acuerdo al archivo [requirements.txt](https://github.com/juancadh/item_nuevo_usado/blob/main/requirements.txt)
+    ```bash
+    pip install -r requirements.txt
+    ```
+4. Abrir el proyecto con el editor de código de preferencia.
+5. En la carpeta [Notebooks](https://github.com/juancadh/item_nuevo_usado/tree/main/notebooks) encontrará dos archivos:
    * [EDA.ipynb](https://github.com/juancadh/item_nuevo_usado/blob/main/notebooks/EDA.ipynb): Jupyter Notbook con el Exploratory Data Analysis (EDA).
    * [modelling.ipynb](https://github.com/juancadh/item_nuevo_usado/blob/main/notebooks/modelling.ipynb): Jupyter Notebook con para definir y evaluar el clasificador.
+  
 
 ## Resultados
 
@@ -33,28 +70,57 @@ Usando la base de datos `MLA_100k_checked_v3.jsonlines` estimar un modelo de apr
 
 Las variables fueron seleccionadas de acuerdo a los siguientes criterios ordenados (ver sección [Variables](#variables) para más detalle):
 
-1. La variable no fue considerada si tenia mas del 70% de valores nulos o vacios. Se descartaron: *differential_pricing, catalog_product_id, subtitle, original_price, official_store_id, video_id, listing_source, coverage_areas, descriptions, international_delivery_mode, shipping_methods, shipping_dimensions*
-2. La variable no fue considerada si todos sus valores eran repetidos con otra variable o si eran una transformacion lineal de otra. Se descartó: *base_price*.
-3. La variable no fue considerada si su valor representa un id, codigo o URL que no tiene información, significado o no se puede mappear con otras tablas. Se descartó: *deal_ids, thumbnail, secure_thumbnail, permalink, site_id, parent_item_id*.
-4. Para las variable categoricas. Se tomaron las variables que lograban separar bien las clases de nuevo o usado. Dentro del DEA, se utilizó la **prueba Chi-cuadrado sobre las tablas de contigenci** a y se esperaba que rechazara la Ho de independencia para poder decir si la variable era o no un buen predictor. Adicionalmente, se observó usando un gráfico de violín si las clases estaban separadas. 
-5. Las dos variables de texto: *title* y *warranty* se incluyeron en el modelo usando un vectorizador TfiDF dado que se presumia que podian contener información relevante para la clasificacion.
-6. Al final, solo se contó con una variable continua: *price* (dado que varias de ellas se volvieron categoricas se muestra en el DEA), la cual fue incluida en el modelo y se observó en esa etapa si aportaba o no para mejorar la medida de desempeño.
+1. La variable no fue considerada si tenía más del 70% de valores nulos o vacíos. Se descartaron: *differential_pricing, catalog_product_id, subtitle, original_price, official_store_id, video_id, listing_source, coverage_areas, descriptions, international_delivery_mode, shipping_methods, shipping_dimensions*
+2. La variable no fue considerada si todos sus valores eran repetidos con otra variable o si eran una transformación lineal de otra. Se descartó: *base_price*.
+3. La variable no fue considerada si su valor representa un id, código o URL que no tiene información, significado o no se puede mappear con otras tablas. Se descartó: *deal_ids, thumbnail, secure_thumbnail, permalink, site_id, parent_item_id*.
+4. Para las variable categóricas se tomaron aquellas variables que lograban separar bien las clases de nuevo o usado. Dentro del DEA, se utilizó la **prueba Chi-cuadrado sobre las tablas de contigencia** donde se esperaba rechazar la Hipótesis Nula de independencia para poder decidir si la variable era un buen predictor. Adicionalmente, se realizó un gráfico de violín para observar si las clases estaban separadas. 
+5. Las dos variables de texto: *title* y *warranty* se incluyeron en el modelo usando un vectorizador TfiDF dado que se presumía que podian contener información relevante para la clasificación.
+6. Al final, solo se contó con una variable continua: *price* (dado que varias de ellas se tranformaron a categóricas como se muestra en el DEA), la cual fue incluida en el modelo y se observó en esa etapa si aportaba o no para mejorar la medida de desempeño.
 7. La lista de variables utilizada al final fue: *'title', 'price', 'sold_quantity_category', 'listing_type_id', 'days_active', 'buying_mode', 'available_quantity_category', 'shipping_local_pick_up', 'shipping_free_shipping', 'shipping_mode',
 'has_variations', 'warranty'*.
 
 #### Medida de desempeño secundaria
-Adiconalmente a la medida de *Accuracy* que se solicitaba en el ejercicio, se utilizó el `Área bajo la curva ROC` (ROC AUC), la cual es una métrica robusta que evalua el rendimiento del modelo sin depender del umbral de clasificación.
+Adiconalmente a la medida de *Accuracy* que se solicitaba en el ejercicio, se utilizó el `Área bajo la curva ROC` (ROC AUC), la cual es una métrica robusta que evalua el rendimiento del modelo sin depender del umbral de clasificación y adicionalmente evita incurrir en falsos positivos. 
+
+**Importancia para el negocio de la medida seleccionada:**
+> La curva ROC traza la tasa de verdaderos positivos frente a la tasa de falsos positivos, por lo que se utiliza esta medida para **controlar los falsos positivos**. los falsos positivos se quieren evitar dado que se asume que **es más costosos para MELI predecir un producto como nuevo cuando en verdad era usado.** De cara al cliente, esto puede reducir la reputación y poner en juego el nombre del negocio.
 
 #### Desempeño alcanzado
-La siguiente tabla resume los resultados de los diferentes modelos de clasificación que fueron probados usadon la medida de desempeño Accuracy y la medida propuesta de ROC AUC.
+La siguiente tabla resume los resultados de los diferentes modelos de clasificación que fueron probados usando la medida de desempeño Accuracy y la medida propuesta de ROC AUC.
 > El mejor modelo fue el modelo XGBoost con un accruacy en test de `0.8854` y un ROC AUC en test de `0.9541`
 
 |                | **Baseline (Logit simple)** | **Logit Mejorado** | **XGBoost** | **SVC**  |
 |----------------|-----------------------------|--------------------|-------------|----------|
 | Train Accuracy | 0.8799                      | 0.9022             | 0.8942      | 0.8617   |
-| Test Accuracy  | 0.8611                      | `0.8879`           | 0.8854      | 0.8378   |
+| Test Accuracy  | 0.8611                      | `0.8874`           | 0.8854      | 0.8378   |
 | Train ROC AUC  | 0.9478                      | 0.9616             | 0.9635      | 0.9569   |
-| Test ROC AUC   | 0.9338                      | 0.9524             | `0.9541`    | 0.9294   |
+| Test ROC AUC   | 0.9338                      | 0.9534             | `0.9541`    | 0.9294   |
+
+**Curva ROC - Modelo XGBoost (Test)**
+
+![Curva ROC - XGBoost](reports/figures/logit_mejorado_roc_auc_test.png)
+
+#### Hitos
+* Las cases 'nuevo' y 'usado' no están desbalanceadas (53.7% Nuevos, 46.3% Usados).
+* Las variables no estructuradas de 'title' y 'warranty' se incluyeron en los modelos dado que estas aportaban información relevante para predecir las clases. Por ejemplo: Títulos como *'Guitarra eléctrica 5 años de uso'* pueden indicar que el producto es usado. Para esto se utilizó la representación vectorizada del texto usando TfIdF. Sin embargo, es posible mejorarlo usando una representación de embeddings que extraiga más y mejor información del texto.
+* Se utilizó GridSearch con validación cruzada para optimizar los hiper-parámetros.
+
+## Puesta en producción
+
+Para poner en producción el modelo de clasificacion de items nuevos y usados, se recomienda implementar una API haciendo uso del modelo `Logit Mejorado` el cual tiene un muy buen desempeño frente a los otros competidores y además ofrece una baja latencia. 
+
+En el archivo [for_deployment.py](https://github.com/juancadh/item_nuevo_usado/blob/main/for_deployment.py) se ha dispuesto un esquema de API sencilla utilizando el framework de Flask, sin embargo, se recomienda migrar a **Fast API** para mejorar la velocidad y la documentación. 
+
+La API recibe como input la información en el mismo formato json con el que se entrenó el modelo (el mismo usado en la API de MELI) y entrega como resultado el siguiente formato JSON:
+
+```json
+{
+    "prediction": "Nuevo", 
+    "probability": 0.872321
+}
+```
+
+Donde `prediction` correponde a la prediccion final estimada por el clasificador y `probability` corresponde a la probabilidad estiada del modelo.
 
 ## Variables
 * **sellers_address** Ubicación del seller. (country, state, city).
@@ -99,24 +165,6 @@ La siguiente tabla resume los resultados de los diferentes modelos de clasificac
 * **international_delivery_mode**: No tiene datos.
 * **shipping_methods**: No tiene información. Todo vacio. 
 * **shipping_dimensions**: No tiene informacion relevante. 
-
-
-## Puesta en producción
-
-Para poner en producción el modelo de clasificacion de items nuevos y usados, se recomienda implementar una API haciendo uso del modelo `Logit Mejorado` el cual tiene un muy buen desempeño frente a los otros competidores y además ofrece una baja latencia. 
-
-En el archivo [for_deployment.py](https://github.com/juancadh/item_nuevo_usado/blob/main/for_deployment.py) se ha dispuesto un esquema de API sencilla utilizando el framework de Flask, sin embargo, se recomienda migrar a **Fast API** para mejorar la velocidad y la documentación. 
-
-La API recibe como input la información en el mismo formato json con el que se entrenó el modelo (el mismo usado en la API de MELI) y entrega como resultado el siguiente formato JSON:
-
-```json
-{
-    "prediction": "Nuevo", 
-    "probability": 0.872321
-}
-```
-
-Donde `prediction` correponde a la prediccion final estimada por el clasificador y `probability` corresponde a la probabilidad estiada del modelo.
 
 ## Por mejorar
 

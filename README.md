@@ -15,7 +15,7 @@
     - [Variables no usadas](#variables-no-usadas)
 - [Por mejorar](#por-mejorar)
 - [Tecnologías](#tecnologías)
-- [Librerias utilizadas](#librerias-utilizadas)
+- [Librerías utilizadas](#librerías-utilizadas)
 - [Recursos](#recursos)
 - [Licencia](#licencia)
 - [Autor](#autor)
@@ -26,14 +26,20 @@ Usando la base de datos `MLA_100k_checked_v3.jsonlines` estimar un modelo de apr
 ## Pasos para instalación
 
 ### Usando Docker
-1. Utiliza el siguiente comando para construir las imágenes y levantar los contenedores:
+1. Clonar este repositorio localmente.
+2. Utiliza el siguiente comando para construir las imágenes y levantar los contenedores:
 ```bash
 docker-compose up --build
 ```
-2. Acceder al contenedor.
+3. Acceder al contenedor.
 ```bash
 docker-compose up
 ```
+4. Abrir el proyecto con el editor de código de preferencia.
+5. En la carpeta [Notebooks](https://github.com/juancadh/item_nuevo_usado/tree/main/notebooks) encontrará dos archivos:
+   * [EDA.ipynb](https://github.com/juancadh/item_nuevo_usado/blob/main/notebooks/EDA.ipynb): Jupyter Notbook con el Exploratory Data Analysis (EDA).
+   * [modelling.ipynb](https://github.com/juancadh/item_nuevo_usado/blob/main/notebooks/modelling.ipynb): Jupyter Notebook con para definir y evaluar el clasificador.
+  
 
 ### Usando ambiente virtual
 1. Clonar este repositorio localmente.
@@ -83,7 +89,7 @@ Las variables fueron seleccionadas de acuerdo a los siguientes criterios ordenad
 Adiconalmente a la medida de *Accuracy* que se solicitaba en el ejercicio, se utilizó el `Área bajo la curva ROC` (ROC AUC), la cual es una métrica robusta que evalua el rendimiento del modelo sin depender del umbral de clasificación y adicionalmente evita incurrir en falsos positivos. 
 
 **Importancia para el negocio de la medida seleccionada:**
-> La curva ROC traza la tasa de verdaderos positivos frente a la tasa de falsos positivos, por lo que se utiliza esta medida para **controlar los falsos positivos**. los falsos positivos se quieren evitar dado que se asume que **es más costosos para MELI predecir un producto como nuevo cuando en verdad era usado.** De cara al cliente, esto puede reducir la reputación y poner en juego el nombre del negocio.
+> La curva ROC traza la tasa de verdaderos positivos frente a la tasa de falsos positivos, por lo que se utiliza esta medida para **controlar los falsos positivos**. Los falsos positivos se quieren evitar dado que se asume que **es más costosos para MELI predecir un producto como nuevo cuando en verdad era usado.** De cara al cliente, esto puede reducir la reputación y poner en juego el nombre del negocio.
 
 #### Desempeño alcanzado
 La siguiente tabla resume los resultados de los diferentes modelos de clasificación que fueron probados usando la medida de desempeño Accuracy y la medida propuesta de ROC AUC.
@@ -101,13 +107,13 @@ La siguiente tabla resume los resultados de los diferentes modelos de clasificac
 ![Curva ROC - XGBoost](reports/figures/logit_mejorado_roc_auc_test.png)
 
 #### Hitos
-* Las cases 'nuevo' y 'usado' no están desbalanceadas (53.7% Nuevos, 46.3% Usados).
-* Las variables no estructuradas de 'title' y 'warranty' se incluyeron en los modelos dado que estas aportaban información relevante para predecir las clases. Por ejemplo: Títulos como *'Guitarra eléctrica 5 años de uso'* pueden indicar que el producto es usado. Para esto se utilizó la representación vectorizada del texto usando TfIdF. Sin embargo, es posible mejorarlo usando una representación de embeddings que extraiga más y mejor información del texto.
+* Las clases 'nuevo' y 'usado' no están desbalanceadas (53.7% Nuevos, 46.3% Usados).
+* Las variables no estructuradas de *'title'* y *'warranty'* se incluyeron en los modelos dado que estas aportaban información relevante para predecir las clases. Por ejemplo, títulos como *'Guitarra eléctrica 5 años de uso'* pueden indicar que el producto es usado. Para esto se utilizó la representación vectorizada del texto usando TfIdF. Sin embargo, es posible mejorarlo usando una representación de embeddings que extraiga más y mejor información del texto.
 * Se utilizó GridSearch con validación cruzada para optimizar los hiper-parámetros.
 
 ## Puesta en producción
 
-Para poner en producción el modelo de clasificacion de items nuevos y usados, se recomienda implementar una API haciendo uso del modelo `Logit Mejorado` el cual tiene un muy buen desempeño frente a los otros competidores y además ofrece una baja latencia. 
+Para poner en producción el modelo de clasificación de ítems nuevos y usados, se recomienda implementar una API haciendo uso del modelo `Logit Mejorado` el cual tiene un muy buen desempeño frente a los otros competidores y además ofrece una baja latencia. 
 
 En el archivo [for_deployment.py](https://github.com/juancadh/item_nuevo_usado/blob/main/for_deployment.py) se ha dispuesto un esquema de API sencilla utilizando el framework de Flask, sin embargo, se recomienda migrar a **Fast API** para mejorar la velocidad y la documentación. 
 
@@ -120,7 +126,7 @@ La API recibe como input la información en el mismo formato json con el que se 
 }
 ```
 
-Donde `prediction` correponde a la prediccion final estimada por el clasificador y `probability` corresponde a la probabilidad estiada del modelo.
+Donde `prediction` correponde a la predicción final estimada por el clasificador y `probability` corresponde a la probabilidad estimada del modelo.
 
 ## Variables
 * **sellers_address** Ubicación del seller. (country, state, city).
@@ -135,21 +141,21 @@ Donde `prediction` correponde a la prediccion final estimada por el clasificador
 * **last_updated**: Ultima actualización.
 * **accepts_mercadopago**: 1 si acepta mercadopago, 0 si no. Solo pocos tienen 0 pero los que son cero la mayoria venden usado.
 * **currency_id**: Tipo de moneda. Puede tomar el valor de 'ARG', 'USD'. Hay muy pocos con 'USD'.
-* **title**: Titulo de la publicación. Puede contener palabras clave que determinen si es nuevo o usado. 
-* **automatic_relist**: Replublicación automática. Son pocas las que tienen en true, pero cuando lo tiene identifica bien la clase de nuevo.
-* **status**: Estado de la publicacion. La mayoria son activos y unos pocos pausados. 
-* **sold_quantity**: Nuero de ventas. Si ha venidio al menos uno puede ser un indicador que el producto es nuevo.
-* **available_quantity**: Numero de unidades disponibles. Si tiene mas de una unidad puede ser un buen indicador de que el producto es nuevo.
+* **title**: Título de la publicación. Puede contener palabras clave que determinen si es nuevo o usado. 
+* **automatic_relist**: Republicación automática. Son pocas las que tienen en true, pero cuando lo tiene identifica bien la clase de nuevo.
+* **status**: Estado de la publicación. La mayoría son activos y unos pocos pausados. 
+* **sold_quantity**: Número de ventas. Si ha venidio al menos uno puede ser un indicador que el producto es nuevo.
+* **available_quantity**: Número de unidades disponibles. Si tiene mas de una unidad puede ser un buen indicador de que el producto es nuevo.
 * **shipping_local_pick_up**: Tipo de recogida del producto local?
-* **shipping_free_shipping**: Tiene o no envio gratuido. Si tiene envio gratuito puede ser un buen indicador de que el producto es nuevo. 
+* **shipping_free_shipping**: Tiene o no envío gratuito. Si tiene envío gratuito puede ser un buen indicador de que el producto es nuevo. 
 * **shipping_mode**: El modo de entrega puede ayudar a identificar si es nuevo o usado. Toma los valores de 'custom', 'me1', 'me2', 'not_specified'.
   
 #### Variables no usadas 
 * **base_price**: Tiene exactamente los mismos valores que price (revisado)
 * **deal_ids**: Contiene solo valores de deal ids sin relevencia. 
 * **thumbnail**: No tiene imagenes. Solo una imagen default.
-* **secure_thumbnail**: No tiene informacion relevante. Envia a una pagina forbidden.
-* **permalink**: No tiene links relevantes. Se revisaron y estan expirados.
+* **secure_thumbnail**: No tiene información relevante. Envía a una página forbidden.
+* **permalink**: No tiene links relevantes. Se revisaron y se encuentran expirados.
 * **site_id**: Toma siempre el valor de MLA (Mercado Libre Argentina)
 * **sellers_country**: Siempre toma el valor de Argentina.
 * **parent_item_id**: Id del padre, no me dice nada por la poca cantidad de datos.
@@ -164,20 +170,20 @@ Donde `prediction` correponde a la prediccion final estimada por el clasificador
 * **descriptions**: Lista de id. Se puede omitir. 
 * **international_delivery_mode**: No tiene datos.
 * **shipping_methods**: No tiene información. Todo vacio. 
-* **shipping_dimensions**: No tiene informacion relevante. 
+* **shipping_dimensions**: No tiene información relevante. 
 
 ## Por mejorar
 
-1. Dado el recurso limitado del tiempo y la capacidad de computo, se siguiere mejorar la optimizacion de los hiperparametros de los modelos lo cual puede mejorar el desempeño.
+1. Dado el recurso limitado del tiempo y la capacidad de computo, se siguiere mejorar la optimización de los hiper-párametros de los modelos lo cual puede mejorar el desempeño.
 2. Incluir una etapa de selección de features usando alguna tecnica como KNN, Random Forest Feature Selection o Recursive Feature Elimination (RFE) entendiendo estadisticamente la importancia que tiene cada una de estas en la predicción final.
-3. Realizar un analisis post-estimación como SHAP values para entender mejor como interactua cada variable en la probabilidad de predecir nuevo o usado. 
+3. Realizar un análisis post-estimación como SHAP values para entender mejor como interactua cada variable en la probabilidad de predecir nuevo o usado. 
 
 ## Tecnologías
 *   Python 3.11.3
 *   Git / Github
 *   Postman -- Para revisar que la API funcione.
 
-## Librerias utilizadas
+## Librerías utilizadas
 * pandas
 * numpy
 * sklearn
@@ -189,7 +195,7 @@ Donde `prediction` correponde a la prediccion final estimada por el clasificador
 * flask
 
 ## Recursos
-* [Chi-square test in contingency tables](https://towardsdatascience.com/chi-square-test-for-feature-selection-in-machine-learning-206b1f0b8223) - Used to DEA and feature selection
+* [Chi-square test in contingency tables](https://towardsdatascience.com/chi-square-test-for-feature-selection-in-machine-learning-206b1f0b8223) - Usado en el DEA y selección de features.
 
 ## Licencia
 > Este proyecto tiene licencia MIT
